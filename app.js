@@ -10,6 +10,7 @@ let totalCardsThisSession = 0;
 let revealedCells = new Set();
 let currentMysteryIndex = 0;
 let settingsOpen = false;
+let voiceEnabled = localStorage.getItem('voiceEnabled') === 'true';
 
 const CARDS_PER_REVEAL = 1;
 const GRID_SIZE = 16;
@@ -217,6 +218,7 @@ function handleChoice(choice) {
   answered = true;
   wasCorrect = choice.word === entry.word;
   totalCardsThisSession++;
+  speakWord(entry.word);
 
   let showingCelebration = false;
 
@@ -402,10 +404,31 @@ function toggleGroup(groupName) {
   renderAll();
 }
 
+// ---- Voice ----
+function speakWord(word) {
+  if (!voiceEnabled || !window.speechSynthesis) return;
+  const utter = new SpeechSynthesisUtterance(word);
+  utter.lang = 'en-GB';
+  utter.rate = 0.8;
+  speechSynthesis.speak(utter);
+}
+
+function toggleVoice() {
+  voiceEnabled = !voiceEnabled;
+  localStorage.setItem('voiceEnabled', voiceEnabled);
+  updateVoiceButton();
+}
+
+function updateVoiceButton() {
+  document.getElementById('voice-btn').textContent = voiceEnabled ? '🔊' : '🔇';
+}
+
 // ---- Event Listeners ----
 document.addEventListener('DOMContentLoaded', () => {
   init();
+  updateVoiceButton();
 
+  document.getElementById('voice-btn').addEventListener('click', toggleVoice);
   document.getElementById('settings-btn').addEventListener('click', openSettings);
 
   window.addEventListener('resize', () => {
