@@ -3,41 +3,47 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ReadFlip — Phonics Flashcards</title>
+  <title>FlashReader — Phonics Flashcards</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
   <div class="header">
-    <h1>ReadFlip</h1>
-    <button class="settings-btn" id="settings-btn" aria-label="Settings">⚙️</button>
+    <h1>FlashReader</h1>
+    <button class="settings-btn" id="settings-btn" aria-label="Settings" title="Pick which sounds to include">🔤</button>
   </div>
 
-  <div class="card-container">
-    <div class="flashcard" id="flashcard"></div>
-  </div>
+  <div class="main-layout">
+    <div class="quiz-column">
+      <div class="card-container">
+        <div class="flashcard" id="flashcard"></div>
+      </div>
 
-  <div class="emoji-choices" id="emoji-choices"></div>
+      <div class="emoji-choices" id="emoji-choices"></div>
 
-  <div class="feedback" id="feedback"></div>
+      <div class="feedback" id="feedback"></div>
 
-  <div class="btn-row" id="next-row" style="display:none">
-    <button class="next-btn" id="next-btn">Next</button>
-  </div>
+      <div class="btn-row" id="next-row" style="display:none">
+        <button class="next-btn" id="next-btn">Next</button>
+      </div>
 
-  <div class="session-counter" id="session-counter"></div>
-
-  <div class="progress-section">
-    <div class="progress-label" id="progress-label">0/4 until next reveal</div>
-    <div class="progress-bar-track">
-      <div class="progress-bar-fill" id="progress-fill" style="width: 0%"></div>
+      <div class="session-counter" id="session-counter"></div>
     </div>
-  </div>
 
-  <div class="mystery-section">
-    <div class="mystery-wrapper" id="mystery-wrapper">
-      <canvas id="mystery-canvas"></canvas>
-      <div class="mystery-overlay" id="mystery-overlay"></div>
+    <div class="picture-column">
+      <div class="progress-section">
+        <div class="progress-label" id="progress-label">0/4 until next reveal</div>
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill" id="progress-fill" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <div class="mystery-section">
+        <div class="mystery-wrapper" id="mystery-wrapper">
+          <canvas id="mystery-canvas"></canvas>
+          <div class="mystery-overlay" id="mystery-overlay"></div>
+        </div>
+      </div>
     </div>
   </div>
 

@@ -517,6 +517,26 @@ body {
   transform: scale(0.93);
 }
 
+/* ---- Layout ---- */
+.main-layout {
+  width: 100%;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.quiz-column {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.picture-column {
+  width: 100%;
+}
+
 /* ---- Responsive ---- */
 @media (max-width: 400px) {
   .flashcard-word {
@@ -532,6 +552,38 @@ body {
 }
 
 @media (min-width: 768px) {
+  .header {
+    max-width: 900px;
+  }
+
+  .main-layout {
+    max-width: 900px;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 40px;
+  }
+
+  .quiz-column {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .card-container,
+  .emoji-choices,
+  .feedback,
+  .btn-row,
+  .progress-section,
+  .mystery-section {
+    max-width: none;
+  }
+
+  .picture-column {
+    width: 320px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 16px;
+  }
+
   .flashcard-word {
     font-size: 4.5rem;
   }
