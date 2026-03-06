@@ -140,20 +140,8 @@ function revealNextCell() {
 
 // ---- Render ----
 function renderAll() {
-  renderProgress();
   renderCard();
   renderChoices();
-  renderFeedback();
-  renderNextButton();
-  renderSessionCounter();
-}
-
-function renderProgress() {
-  const done = cardsCompleted % CARDS_PER_REVEAL;
-  const pct = (done / CARDS_PER_REVEAL) * 100;
-  document.getElementById('progress-label').textContent =
-    `${done}/${CARDS_PER_REVEAL} until next reveal`;
-  document.getElementById('progress-fill').style.width = pct + '%';
 }
 
 function renderCard() {
@@ -203,8 +191,13 @@ function renderChoices() {
       btn.classList.add('disabled');
       if (choice.word === correctWord) {
         btn.classList.add('correct');
+        if (wasCorrect) {
+          const tick = document.createElement('div');
+          tick.className = 'emoji-tick';
+          tick.textContent = '\u2714';
+          btn.appendChild(tick);
+        }
       } else if (!wasCorrect) {
-        // Fade wrong options only when answer was wrong (to draw attention to correct one)
         btn.classList.add('wrong');
       }
     } else {
@@ -215,31 +208,6 @@ function renderChoices() {
   }
 }
 
-function renderFeedback() {
-  const container = document.getElementById('feedback');
-  if (!answered) {
-    container.innerHTML = '';
-    return;
-  }
-
-  if (wasCorrect) {
-    container.innerHTML = '<div class="feedback-tick">&#10004;</div>';
-  } else {
-    container.innerHTML = '';
-  }
-}
-
-function renderNextButton() {
-  // Next button is no longer needed — auto-advance handles it
-  document.getElementById('next-row').style.display = 'none';
-}
-
-function renderSessionCounter() {
-  document.getElementById('session-counter').textContent =
-    totalCardsThisSession > 0
-      ? `${totalCardsThisSession} word${totalCardsThisSession !== 1 ? 's' : ''} done today!`
-      : '';
-}
 
 // ---- Actions ----
 function handleChoice(choice) {
@@ -262,7 +230,6 @@ function handleChoice(choice) {
         setTimeout(showCelebration, 2000);
       }
     }
-    renderProgress();
   } else {
     // Re-insert this word later in the deck
     const copy = { ...entry };
@@ -271,7 +238,6 @@ function handleChoice(choice) {
   }
 
   renderChoices();
-  renderFeedback();
 
   // Auto-advance after a delay (skip if celebration is about to show)
   if (!showingCelebration) {
@@ -331,7 +297,6 @@ function dismissCelebration() {
   pickMysteryPicture();
   renderMysteryCanvas();
   renderOverlayCells();
-  renderProgress();
 }
 
 // ---- Settings ----
@@ -441,7 +406,6 @@ function toggleGroup(groupName) {
 document.addEventListener('DOMContentLoaded', () => {
   init();
 
-  document.getElementById('next-btn').addEventListener('click', handleNext);
   document.getElementById('settings-btn').addEventListener('click', openSettings);
 
   window.addEventListener('resize', () => {
