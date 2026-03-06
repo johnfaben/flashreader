@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ReadFlip — Phonics Flashcards</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="header">
+    <h1>ReadFlip</h1>
+    <button class="settings-btn" id="settings-btn" aria-label="Settings">⚙️</button>
+  </div>
+
+  <div class="card-container">
+    <div class="flashcard" id="flashcard"></div>
+  </div>
+
+  <div class="emoji-choices" id="emoji-choices"></div>
+
+  <div class="feedback" id="feedback"></div>
+
+  <div class="btn-row" id="next-row" style="display:none">
+    <button class="next-btn" id="next-btn">Next</button>
+  </div>
+
+  <div class="session-counter" id="session-counter"></div>
+
+  <div class="progress-section">
+    <div class="progress-label" id="progress-label">0/4 until next reveal</div>
+    <div class="progress-bar-track">
+      <div class="progress-bar-fill" id="progress-fill" style="width: 0%"></div>
+    </div>
+  </div>
+
+  <div class="mystery-section">
+    <div class="mystery-wrapper" id="mystery-wrapper">
+      <canvas id="mystery-canvas"></canvas>
+      <div class="mystery-overlay" id="mystery-overlay"></div>
+    </div>
+  </div>
+
+  <script src="wordData.js"></script>
+  <script src="mysteryPictures.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
