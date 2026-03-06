@@ -11,8 +11,8 @@ let revealedCells = new Set();
 let currentMysteryIndex = 0;
 let settingsOpen = false;
 
-const CARDS_PER_REVEAL = 2;
-const GRID_SIZE = 9;
+const CARDS_PER_REVEAL = 1;
+const GRID_SIZE = 16;
 
 // ---- Init ----
 function init() {
