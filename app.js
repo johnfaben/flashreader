@@ -13,7 +13,8 @@ let settingsOpen = false;
 let voiceEnabled = localStorage.getItem('voiceEnabled') === 'true';
 
 const CARDS_PER_REVEAL = 1;
-const GRID_SIZE = 16;
+const GRID_SIZE = 9;
+const CENTER_CELL = 4;  // middle of 3x3 grid, revealed last
 
 // ---- Init ----
 function init() {
@@ -131,7 +132,11 @@ function revealNextCell() {
   for (let i = 0; i < GRID_SIZE; i++) {
     if (!revealedCells.has(i)) unrevealed.push(i);
   }
-  const pick = unrevealed[Math.floor(Math.random() * unrevealed.length)];
+  // Save center cell for last
+  const candidates = unrevealed.length === 1
+    ? unrevealed
+    : unrevealed.filter(i => i !== CENTER_CELL);
+  const pick = candidates[Math.floor(Math.random() * candidates.length)];
   revealedCells.add(pick);
 
   const overlay = document.getElementById('mystery-overlay');
