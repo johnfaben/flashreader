@@ -304,6 +304,7 @@ function dismissCelebration() {
   pickMysteryPicture();
   renderMysteryCanvas();
   renderOverlayCells();
+  handleNext();
 }
 
 // ---- Settings ----
