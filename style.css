@@ -7,13 +7,13 @@
 }
 
 :root {
-  --coral: #FF6B6B;
-  --coral-dark: #e55a5a;
-  --teal: #4ECDC4;
-  --teal-dark: #3dbdb4;
-  --cream: #FFF8F0;
-  --warm-grey: #B8B0A8;
-  --dark: #2D3436;
+  --coral: #4a4a4a;
+  --coral-dark: #2e2e2e;
+  --teal: #666666;
+  --teal-dark: #4a4a4a;
+  --cream: #d8d8d8;
+  --warm-grey: #888888;
+  --dark: #333333;
   --card-bg: #FFFFFF;
   --shadow: 0 4px 20px rgba(0,0,0,0.08);
   --radius: 20px;
@@ -112,7 +112,7 @@ body {
   aspect-ratio: 1;
   font-size: 3.5rem;
   background: var(--card-bg);
-  border: 3px solid #E8E0D8;
+  border: 3px solid #cccccc;
   border-radius: var(--radius);
   cursor: pointer;
   display: flex;
@@ -139,7 +139,7 @@ body {
 
 .emoji-btn.correct {
   border-color: var(--teal);
-  background: #E8FFF8;
+  background: #ebebeb;
   animation: popCorrect 0.4s ease;
 }
 
@@ -150,7 +150,7 @@ body {
 
 .emoji-btn.reveal {
   border-color: var(--teal);
-  background: #E8FFF8;
+  background: #ebebeb;
 }
 
 .emoji-btn.disabled {
@@ -270,7 +270,7 @@ body {
 .progress-bar-track {
   width: 100%;
   height: 8px;
-  background: #E8E0D8;
+  background: #cccccc;
   border-radius: 4px;
   overflow: hidden;
 }
@@ -313,9 +313,9 @@ body {
 }
 
 .overlay-cell {
-  background: #D4CBC0;
+  background: #cccccc;
   transition: background 0.5s ease, opacity 0.5s ease;
-  border: 1px solid #C8BFB4;
+  border: 1px solid #bbbbbb;
 }
 
 .overlay-cell.revealed {
@@ -516,7 +516,7 @@ body {
   font-family: 'Nunito', sans-serif;
   cursor: pointer;
   transition: all 0.15s ease;
-  border: 2px solid #D4CBC0;
+  border: 2px solid #cccccc;
   background: transparent;
   color: var(--warm-grey);
   min-width: 44px;
