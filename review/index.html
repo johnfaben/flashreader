@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Word review — FlashReader</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap');
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Nunito', sans-serif; background: #d8d8d8; color: #333; padding: 16px; }
+    button, select, input { font-family: inherit; font-size: 0.9rem; }
+    .wrap { max-width: 860px; margin: 0 auto; }
+    .top { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-bottom: 10px; }
+    .top h1 { font-size: 1.2rem; font-weight: 800; margin-right: auto; }
+    .top select, .top button, .bar button { padding: 6px 10px; border-radius: 8px; border: 1px solid #aaa; background: #fff; cursor: pointer; font-weight: 700; }
+    .top label { font-size: 0.85rem; font-weight: 600; display: flex; gap: 6px; align-items: center; }
+    .progress { font-size: 0.85rem; font-weight: 700; color: #555; margin-bottom: 6px; }
+    .track { height: 8px; background: #bbb; border-radius: 4px; overflow: hidden; display: flex; margin-bottom: 14px; }
+    .track .kept { background: #3a8f5c; } .track .rejected { background: #b5524a; }
+    .card { background: #fff; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); padding: 24px; }
+    .meta { display: flex; justify-content: space-between; gap: 12px; font-size: 0.8rem; font-weight: 700; color: #888; margin-bottom: 4px; }
+    .status-keep { color: #3a8f5c; } .status-reject { color: #b5524a; }
+    .word { font-size: 5rem; font-weight: 800; letter-spacing: 0.04em; line-height: 1.15; text-align: center; }
+    .word.rejected { text-decoration: line-through; color: #aaa; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 10px 0 6px; }
+    .chip { padding: 6px 12px; border-radius: 10px; background: #666; color: #fff; font-weight: 700; font-size: 1.05rem; }
+    .chip.new { background: #fff; color: #333; border: 2px dashed #888; }
+    .chip-edit { display: flex; gap: 8px; justify-content: center; align-items: center; font-size: 0.8rem; color: #777; margin-bottom: 4px; }
+    .chip-edit input { width: 220px; padding: 4px 8px; border: 1px solid #bbb; border-radius: 8px; text-align: center; }
+    .new-note { text-align: center; font-size: 0.8rem; color: #777; margin-bottom: 8px; }
+    .why { background: #f3f0e6; border-radius: 12px; padding: 10px 14px 10px 30px; font-size: 0.9rem; margin: 12px 0; }
+    .why.none { padding-left: 14px; color: #777; }
+    .opts { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; margin: 14px 0; }
+    .opt { border: 3px solid #ccc; border-radius: 14px; background: #fff; padding: 8px; cursor: pointer; text-align: center; position: relative; }
+    .opt:hover { border-color: #666; }
+    .opt.selected { border-color: #3a8f5c; background: #eaf5ee; }
+    .opt img { width: 100%; aspect-ratio: 1; object-fit: contain; display: block; }
+    .opt .key { position: absolute; top: 6px; left: 8px; font-size: 0.75rem; font-weight: 800; color: #999; }
+    .opt .label { font-size: 0.75rem; color: #777; margin-top: 4px; line-height: 1.25; }
+    .hint { text-align: center; font-size: 0.85rem; color: #777; }
+    .bar { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-top: 14px; }
+    .bar .reject { border-color: #b5524a; color: #b5524a; }
+    .bar .repic { border-color: #b07a1e; color: #8a5d10; }
+    .bar .repic.selected { background: #f6e7c8; }
+    .status-repic { color: #8a5d10; }
+    .jump-list button.keep.repic { background: #f6e7c8; border-color: #b07a1e; }
+    .jump { margin-top: 16px; }
+    .jump summary { cursor: pointer; font-weight: 700; font-size: 0.9rem; }
+    .jump-list { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+    .jump-list button { padding: 2px 7px; border-radius: 6px; border: 1px solid #bbb; background: #fff; font-size: 0.78rem; cursor: pointer; }
+    .jump-list button.keep { background: #cfe8d8; border-color: #3a8f5c; }
+    .jump-list button.reject { background: #f0d6d3; border-color: #b5524a; text-decoration: line-through; }
+    .jump-list button.current { outline: 2px solid #333; }
+    .empty { text-align: center; padding: 40px 0; font-weight: 700; color: #777; }
+    .note { font-size: 0.8rem; color: #666; margin-top: 14px; line-height: 1.5; }
+    #import-file { display: none; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h1>Word review</h1>
+    <select id="filter-status" aria-label="Show">
+      <option value="todo">To review</option>
+      <option value="keep">Kept</option>
+      <option value="repic">Kept, needs better picture</option>
+      <option value="reject">Rejected</option>
+      <option value="all">All</option>
+    </select>
+    <select id="filter-group" aria-label="Grapheme set"></select>
+    <label><input type="checkbox" id="filter-loose"> Include words with no exact picture (<span id="loose-count"></span>)</label>
+    <button id="export-btn">Export decisions</button>
+    <button id="import-btn">Import</button>
+    <input type="file" id="import-file" accept=".json">
+  </div>
+  <div class="progress" id="progress"></div>
+  <div class="track"><div class="kept" id="track-kept"></div><div class="rejected" id="track-rejected"></div></div>
+
+  <div class="card" id="card"></div>
+
+  <details class="jump">
+    <summary>All words in this view</summary>
+    <div class="jump-list" id="jump-list"></div>
+  </details>
+
+  <p class="note">Words are ordered with the ones I am least sure about first. Click a picture to keep the word with that picture; it moves to the next word straight away. If the word is good but none of the pictures are, press "Keep word, find a better picture" and I will look for another one. Keys: 1–6 pick a picture, B keep but find a better picture, X reject, arrow keys move without deciding. Decisions are saved in this browser as you go. When you are done (or part way), press Export decisions and pass the file back.</p>
+</div>
+
+<script src="data.js"></script>
+<script>
+const STORE_KEY = 'flashreaderWordReview';
+const picUrl = id => `https://static.arasaac.org/pictograms/${id}/${id}_300.png`;
+let decisions = {};
+try { decisions = JSON.parse(localStorage.getItem(STORE_KEY) || '{}'); } catch (e) { decisions = {}; }
+const byWord = Object.fromEntries(REVIEW_WORDS.map(e => [e.w, e]));
+const appSounds = new Set(APP_SOUNDS);
+let view = [];
+let pos = 0;
+let trail = [];    // words visited, so Back can return to one that has left the current view
+let pinned = null; // a word shown via Back even though the filters would hide it
+
+const $ = id => document.getElementById(id);
+const save = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(decisions)); } catch (e) {} };
+const statusOf = w => (decisions[w] && decisions[w].status) || 'todo';
+const needsPic = w => statusOf(w) === 'keep' && !!decisions[w].repic;
+const graphemesOf = e => (decisions[e.w] && decisions[e.w].g) || e.g;
+
+function buildView(keepWord) {
+  const st = $('filter-status').value, grp = $('filter-group').value, loose = $('filter-loose').checked;
+  view = REVIEW_WORDS.filter(e => e.w === pinned ||
+    (loose || e.exact) && (grp === 'all' || e.grp === grp) && (st === 'all' || (st === 'repic' ? needsPic(e.w) : statusOf(e.w) === st)));
+  const i = keepWord ? view.findIndex(e => e.w === keepWord) : -1;
+  pos = i >= 0 ? i : Math.min(pos, Math.max(view.length - 1, 0));
+}
+
+function renderProgress() {
+  const loose = $('filter-loose').checked;
+  const pool = REVIEW_WORDS.filter(e => loose || e.exact);
+  const kept = pool.filter(e => statusOf(e.w) === 'keep').length;
+  const rej = pool.filter(e => statusOf(e.w) === 'reject').length;
+  const repic = pool.filter(e => needsPic(e.w)).length;
+  $('progress').textContent = `${kept + rej} of ${pool.length} reviewed · ${kept} kept${repic ? ` (${repic} need a better picture)` : ''} · ${rej} rejected`;
+  $('track-kept').style.width = (100 * kept / pool.length) + '%';
+  $('track-rejected').style.width = (100 * rej / pool.length) + '%';
+}
+
+function el(tag, cls, text) {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text !== undefined) n.textContent = text;
+  return n;
+}
+
+function renderCard() {
+  const card = $('card');
+  card.innerHTML = '';
+  if (view.length === 0) {
+    card.appendChild(el('div', 'empty', 'Nothing left in this view.'));
+    return;
+  }
+  const e = view[pos], d = decisions[e.w] || {}, st = statusOf(e.w);
+
+  const meta = el('div', 'meta');
+  meta.appendChild(el('span', '', `${pos + 1} of ${view.length} · ${e.grp}`));
+  meta.appendChild(el('span', d.repic && st === 'keep' ? 'status-repic' : st === 'keep' ? 'status-keep' : st === 'reject' ? 'status-reject' : '',
+    d.repic && st === 'keep' ? 'Kept, needs a better picture' : st === 'keep' ? 'Kept' : st === 'reject' ? 'Rejected' : 'Not decided'));
+  card.appendChild(meta);
+
+  card.appendChild(el('div', 'word' + (st === 'reject' ? ' rejected' : ''), e.w));
+
+  const g = graphemesOf(e);
+  const chips = el('div', 'chips');
+  for (const s of g) chips.appendChild(el('span', 'chip' + (appSounds.has(s) ? '' : ' new'), s));
+  card.appendChild(chips);
+  const fresh = [...new Set(g.filter(s => !appSounds.has(s)))];
+  if (fresh.length) card.appendChild(el('div', 'new-note', `Dashed = not a sound chip in the app yet (${fresh.join(', ')})`));
+
+  const edit = el('div', 'chip-edit');
+  edit.appendChild(el('span', '', 'Edit graphemes:'));
+  const input = el('input');
+  input.value = g.join(' ');
+  input.setAttribute('aria-label', 'Graphemes, separated by spaces');
+  input.addEventListener('change', () => {
+    const parts = input.value.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    decisions[e.w] = Object.assign({}, decisions[e.w]);
+    if (parts.length === 0 || parts.join(' ') === e.g.join(' ')) delete decisions[e.w].g; else decisions[e.w].g = parts;
+    save(); renderCard();
+  });
+  input.addEventListener('keydown', ev => { ev.stopPropagation(); if (ev.key === 'Enter') input.blur(); });
+  edit.appendChild(input);
+  card.appendChild(edit);
+
+  if (e.why.length) {
+    const why = el('ul', 'why');
+    for (const t of e.why) why.appendChild(el('li', '', t));
+    card.appendChild(why);
+  } else {
+    card.appendChild(el('div', 'why none', 'No concerns flagged for this word.'));
+  }
+
+  const opts = el('div', 'opts');
+  e.opts.forEach((o, i) => {
+    const b = el('button', 'opt' + (st === 'keep' && d.pic === o.id ? ' selected' : ''));
+    b.appendChild(el('span', 'key', String(i + 1)));
+    const img = el('img');
+    img.src = picUrl(o.id); img.alt = o.label;
+    b.appendChild(img);
+    b.appendChild(el('div', 'label', o.label));
+    b.addEventListener('click', () => decide('keep', o.id));
+    opts.appendChild(b);
+  });
+  card.appendChild(opts);
+  card.appendChild(el('div', 'hint', e.opts.length > 1 ? 'Click the picture to use. That keeps the word.' : 'Click the picture to keep the word.'));
+
+  const bar = el('div', 'bar');
+  const mk = (text, cls, fn) => { const b = el('button', cls, text); b.addEventListener('click', fn); bar.appendChild(b); };
+  mk('← Back', '', () => move(-1));
+  mk('Keep word, find a better picture (B)', 'repic' + (d.repic && st === 'keep' ? ' selected' : ''), () => decide('repic'));
+  mk('Reject word (X)', 'reject', () => decide('reject'));
+  if (st !== 'todo') mk('Clear decision', '', () => { delete decisions[e.w]; save(); pinned = e.w; refresh(e.w); });
+  mk('Skip →', '', () => move(1));
+  card.appendChild(bar);
+
+  // Fetch the next word's pictures ahead of time
+  const next = view[pos + 1];
+  if (next) next.opts.forEach(o => { new Image().src = picUrl(o.id); });
+}
+
+function renderJump() {
+  const list = $('jump-list');
+  list.innerHTML = '';
+  view.forEach((e, i) => {
+    const st = statusOf(e.w);
+    const b = el('button', (st === 'todo' ? '' : st) + (needsPic(e.w) ? ' repic' : '') + (i === pos ? ' current' : ''), e.w);
+    b.addEventListener('click', () => { pos = i; renderCard(); renderJump(); });
+    list.appendChild(b);
+  });
+}
+
+function refresh(keepWord) { buildView(keepWord); renderProgress(); renderCard(); renderJump(); }
+
+function decide(status, pic) {
+  const e = view[pos];
+  if (!e) return;
+  const prev = decisions[e.w] || {};
+  if (status === 'repic') decisions[e.w] = { status: 'keep', repic: true };
+  else decisions[e.w] = { status };
+  if (prev.g) decisions[e.w].g = prev.g;
+  if (status === 'keep') decisions[e.w].pic = pic;
+  save();
+  advance();
+}
+
+// Move on from the current word, remembering it so Back can return to it.
+function advance() {
+  const e = view[pos];
+  if (!e) return;
+  const nextWord = (view[pos + 1] || {}).w;
+  if (trail[trail.length - 1] !== e.w) trail.push(e.w);
+  pinned = null;
+  if (nextWord) refresh(nextWord);
+  else { refresh(); pos = Math.max(view.length - 1, 0); renderCard(); renderJump(); }
+}
+
+function back() {
+  const cur = (view[pos] || {}).w;
+  let w = trail.pop();
+  if (w === cur) w = trail.pop();
+  if (w) { pinned = w; refresh(w); }
+  else if (pos > 0) { pos--; renderCard(); renderJump(); }
+}
+
+function move(delta) {
+  if (delta < 0) back(); else advance();
+}
+
+function exportDecisions() {
+  const kept = [], rejected = [];
+  for (const e of REVIEW_WORDS) {
+    const d = decisions[e.w];
+    if (!d) continue;
+    if (d.status === 'keep' && d.repic) kept.push({ word: e.w, sounds: d.g || e.g, pictogram: null, needsBetterPicture: true, group: e.grp });
+    else if (d.status === 'keep') kept.push({ word: e.w, sounds: d.g || e.g, pictogram: d.pic, group: e.grp });
+    else if (d.status === 'reject') rejected.push(e.w);
+  }
+  const blob = new Blob([JSON.stringify({ exported: new Date().toISOString(), kept, rejected }, null, 1)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'word-review-decisions.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+function importDecisions(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      for (const k of data.kept || []) {
+        if (!byWord[k.word]) continue;
+        decisions[k.word] = k.needsBetterPicture ? { status: 'keep', repic: true } : { status: 'keep', pic: k.pictogram };
+        if (k.sounds && k.sounds.join(' ') !== byWord[k.word].g.join(' ')) decisions[k.word].g = k.sounds;
+      }
+      for (const w of data.rejected || []) if (byWord[w]) decisions[w] = { status: 'reject' };
+      save(); refresh();
+    } catch (err) { alert('That file could not be read as a decisions export.'); }
+  };
+  reader.readAsText(file);
+}
+
+// ---- Wire up ----
+const groupSel = $('filter-group');
+groupSel.appendChild(new Option('All grapheme sets', 'all'));
+for (const g of REVIEW_GROUPS) groupSel.appendChild(new Option(g, g));
+$('loose-count').textContent = REVIEW_WORDS.filter(e => !e.exact).length;
+for (const id of ['filter-status', 'filter-group', 'filter-loose']) $(id).addEventListener('change', () => { pos = 0; pinned = null; refresh(); });
+$('export-btn').addEventListener('click', exportDecisions);
+$('import-btn').addEventListener('click', () => $('import-file').click());
+$('import-file').addEventListener('change', ev => { if (ev.target.files[0]) importDecisions(ev.target.files[0]); ev.target.value = ''; });
+document.addEventListener('keydown', ev => {
+  if (ev.target.tagName === 'INPUT' || ev.target.tagName === 'SELECT' || ev.ctrlKey || ev.metaKey || ev.altKey) return;
+  const e = view[pos];
+  if (!e) return;
+  if (ev.key >= '1' && ev.key <= '9' && e.opts[+ev.key - 1]) decide('keep', e.opts[+ev.key - 1].id);
+  else if (ev.key === 'b' || ev.key === 'B') decide('repic');
+  else if (ev.key === 'x' || ev.key === 'X') decide('reject');
+  else if (ev.key === 'ArrowRight') move(1);
+  else if (ev.key === 'ArrowLeft') move(-1);
+});
+refresh();
+</script>
+</body>
+</html>
