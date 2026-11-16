@@ -4,33 +4,70 @@ let deck = [];
 let currentIndex = 0;
 let answered = false;
 let wasCorrect = false;
+let chosenWord = null;   // the picture tapped on the current card
 let currentChoices = [];          // [{word, emoji}, ...] — 3 options
 let cardsCompleted = 0;           // correct answers since last grid reveal
 let totalCardsThisSession = 0;
 let revealedCells = new Set();
 let currentMysteryIndex = 0;
+let mysteryQueue = [];            // shuffled picture order, so none repeats until all have been shown
 let settingsOpen = false;
 let voiceEnabled = localStorage.getItem('voiceEnabled') === 'true';
 
 const CARDS_PER_REVEAL = 1;
-const GRID_SIZE = 9;
-const CENTER_CELL = 4;  // middle of 3x3 grid, revealed last
+const GRID_SIZE = 16;        // 4x4 tiles (grid columns are set in style.css)
+const CELLS_PER_REVEAL = 2;  // scattered tiles uncovered per reveal: 8 reveals per picture
 
 // ---- Init ----
 function init() {
   loadKnownSounds();
   pickMysteryPicture();
   buildDeck();
-  renderMysteryCanvas();
+  renderMysteryPicture();
   renderOverlayCells();
   renderAll();
 }
 
 // ---- LocalStorage ----
+// Sounds that at least one word uses; only these get a chip.
+const usedSounds = new Set(allWords.flatMap(w => w.sounds));
+const chipSounds = new Set(soundGroups.flatMap(g => g.sounds));
+const visibleGroups = soundGroups
+  .map(g => ({ name: g.name, sounds: g.sounds.filter(s => usedSounds.has(s)) }))
+  .filter(g => g.sounds.length > 0);
+
+// A doubled consonant with no chip of its own (tt, pp...) counts as known with its single letter.
+function knowsSound(s) {
+  if (knownSounds.has(s)) return true;
+  return !chipSounds.has(s) && s.length === 2 && s[0] === s[1] && knownSounds.has(s[0]);
+}
+const wordIsKnown = w => w.sounds.every(knowsSound);
+
+// Choices saved before the sounds were regrouped into units: keep the same words available.
+function migrateKnownSounds(old) {
+  const renamed = { ow: 'ow|cow', oo: 'oo|moon', ea: 'ea|leaf', ie: 'ie|pie' };
+  const next = new Set();
+  for (const s of old) {
+    if (renamed[s]) next.add(renamed[s]);
+    else if (chipSounds.has(s)) next.add(s);
+  }
+  if (old.has('l')) next.add('ll');
+  if (old.has('s')) next.add('ss');
+  if (old.has('f')) next.add('ff');
+  if (old.has('ou')) next.add('se');
+  if (old.has('sw')) { next.add('w'); next.add('wa'); }
+  if (old.has('ey')) { next.add('nk'); next.add('o|son'); }
+  return next;
+}
+
 function loadKnownSounds() {
   const stored = localStorage.getItem('knownSounds');
   if (stored) {
     knownSounds = new Set(JSON.parse(stored));
+    if (localStorage.getItem('knownSoundsVersion') !== '2') {
+      knownSounds = migrateKnownSounds(knownSounds);
+      saveKnownSounds();
+    }
   } else {
     knownSounds = new Set(soundGroups[0].sounds);
     saveKnownSounds();
@@ -39,11 +76,12 @@ function loadKnownSounds() {
 
 function saveKnownSounds() {
   localStorage.setItem('knownSounds', JSON.stringify([...knownSounds]));
+  localStorage.setItem('knownSoundsVersion', '2');
 }
 
 // ---- Deck ----
 function buildDeck() {
-  deck = allWords.filter(w => w.sounds.every(s => knownSounds.has(s)));
+  deck = allWords.filter(wordIsKnown);
   shuffleDeck();
   currentIndex = 0;
   answered = false;
@@ -56,13 +94,34 @@ function shuffleDeck() {
   }
 }
 
+// Shrink a long word so it fits on one line inside the card; the card keeps its usual height.
+function fitFlashcardWord() {
+  const container = document.getElementById('flashcard');
+  const wordEl = container && container.querySelector('.flashcard-word');
+  if (!wordEl) return;
+  wordEl.style.fontSize = '';
+  container.style.minHeight = '';
+  container.style.minHeight = container.offsetHeight + 'px';
+  const style = getComputedStyle(container);
+  const room = container.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+  const width = wordEl.scrollWidth;
+  if (width > room) {
+    wordEl.style.fontSize = (parseFloat(getComputedStyle(wordEl).fontSize) * room / width) + 'px';
+  }
+}
+window.addEventListener('resize', fitFlashcardWord);
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(fitFlashcardWord);
+
 // ---- Distractor selection ----
 function pickChoices(entry) {
   const firstLetter = entry.word[0].toLowerCase();
 
   // Find other words starting with the same letter (from ALL words, not just deck)
+  // Never offer a wrong answer whose picture is the same as (or means the same as) the right one.
+  const clashes = w => w.image === entry.image ||
+    sameMeaning.some(group => group.includes(entry.word) && group.includes(w.word));
   const sameLetter = allWords.filter(w =>
-    w.word[0].toLowerCase() === firstLetter && w.word !== entry.word
+    w.word[0].toLowerCase() === firstLetter && w.word !== entry.word && !clashes(w)
   );
 
   // Shuffle and pick up to 2 distractors
@@ -71,14 +130,19 @@ function pickChoices(entry) {
     [sameLetter[i], sameLetter[j]] = [sameLetter[j], sameLetter[i]];
   }
 
-  let distractors = sameLetter.slice(0, 2);
+  // Two wrong answers must not share a picture with each other either.
+  let distractors = [];
+  for (const w of sameLetter) {
+    if (distractors.length < 2 && !distractors.some(d => d.image === w.image)) distractors.push(w);
+  }
 
   // If we don't have enough same-letter words, fill from other words
   if (distractors.length < 2) {
     const others = allWords.filter(w =>
       w.word !== entry.word &&
+      !clashes(w) &&
       w.word[0].toLowerCase() !== firstLetter &&
-      !distractors.some(d => d.word === w.word)
+      !distractors.some(d => d.word === w.word || d.image === w.image)
     );
     for (let i = others.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -99,21 +163,33 @@ function pickChoices(entry) {
 
 // ---- Mystery Picture ----
 function pickMysteryPicture() {
-  currentMysteryIndex = Math.floor(Math.random() * mysteryPictures.length);
+  if (mysteryQueue.length === 0) {
+    mysteryQueue = mysteryPictures.map((_, i) => i);
+    for (let i = mysteryQueue.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [mysteryQueue[i], mysteryQueue[j]] = [mysteryQueue[j], mysteryQueue[i]];
+    }
+    // Don't start a new round with the picture that was just shown
+    if (mysteryQueue.length > 1 && mysteryQueue[mysteryQueue.length - 1] === currentMysteryIndex) {
+      mysteryQueue.unshift(mysteryQueue.pop());
+    }
+  }
+  currentMysteryIndex = mysteryQueue.pop();
   revealedCells = new Set();
   cardsCompleted = 0;
 }
 
-function renderMysteryCanvas() {
-  const canvas = document.getElementById('mystery-canvas');
-  const wrapper = document.getElementById('mystery-wrapper');
-  const size = wrapper.clientWidth;
-  const dpr = window.devicePixelRatio || 1;
-  canvas.width = size * dpr;
-  canvas.height = size * dpr;
-  const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-  mysteryPictures[currentMysteryIndex].draw(ctx, size, size);
+function mysteryPictureSrc(index) {
+  return 'art/' + mysteryPictures[index].file;
+}
+
+function renderMysteryPicture() {
+  // The tiles cover the picture completely, so it can load underneath them
+  document.getElementById('mystery-img').src = mysteryPictureSrc(currentMysteryIndex);
+  // Warm the cache for the next picture so it is ready when this one is finished
+  if (mysteryQueue.length > 0) {
+    new Image().src = mysteryPictureSrc(mysteryQueue[mysteryQueue.length - 1]);
+  }
 }
 
 function renderOverlayCells() {
@@ -126,22 +202,18 @@ function renderOverlayCells() {
   }
 }
 
-function revealNextCell() {
-  if (revealedCells.size >= GRID_SIZE) return;
+function revealNextCells() {
   const unrevealed = [];
   for (let i = 0; i < GRID_SIZE; i++) {
     if (!revealedCells.has(i)) unrevealed.push(i);
   }
-  // Save center cell for last
-  const candidates = unrevealed.length === 1
-    ? unrevealed
-    : unrevealed.filter(i => i !== CENTER_CELL);
-  const pick = candidates[Math.floor(Math.random() * candidates.length)];
-  revealedCells.add(pick);
-
   const overlay = document.getElementById('mystery-overlay');
-  const cell = overlay.children[pick];
-  if (cell) cell.classList.add('revealed');
+  for (let n = 0; n < CELLS_PER_REVEAL && unrevealed.length > 0; n++) {
+    const pick = unrevealed.splice(Math.floor(Math.random() * unrevealed.length), 1)[0];
+    revealedCells.add(pick);
+    const cell = overlay.children[pick];
+    if (cell) cell.classList.add('revealed');
+  }
 }
 
 // ---- Render ----
@@ -164,6 +236,7 @@ function renderCard() {
 
   const entry = deck[currentIndex];
   container.innerHTML = `<div class="flashcard-word">${entry.word}</div>`;
+  fitFlashcardWord();
 }
 
 function renderChoices() {
@@ -177,7 +250,8 @@ function renderChoices() {
   if (!answered) {
     // Generate new choices if we don't have them yet
     const entry = deck[currentIndex];
-    currentChoices = pickChoices(entry);
+    currentChoices = (prepared && prepared.entry === entry) ? prepared.choices : pickChoices(entry);
+    prepareNextCard();
   }
 
   container.innerHTML = '';
@@ -205,6 +279,13 @@ function renderChoices() {
         }
       } else if (!wasCorrect) {
         btn.classList.add('wrong');
+        if (choice.word === chosenWord) {
+          btn.classList.add('chosen');
+          const cross = document.createElement('div');
+          cross.className = 'emoji-tick emoji-cross';
+          cross.textContent = '✖';
+          btn.appendChild(cross);
+        }
       }
     } else {
       btn.addEventListener('click', () => handleChoice(choice));
@@ -215,6 +296,18 @@ function renderChoices() {
 }
 
 
+// Choose the next card's pictures ahead of time and fetch them, so they are ready when it appears.
+let prepared = null;
+function prepareNextCard() {
+  const entry = deck[currentIndex + 1];
+  if (!entry) { prepared = null; return; }
+  const choices = pickChoices(entry);
+  prepared = {
+    entry, choices,
+    images: choices.map(c => { const img = new Image(); img.src = 'images/' + c.image; return img; })
+  };
+}
+
 // ---- Actions ----
 function handleChoice(choice) {
   if (answered || deck.length === 0) return;
@@ -222,6 +315,7 @@ function handleChoice(choice) {
   const entry = deck[currentIndex];
   answered = true;
   wasCorrect = choice.word === entry.word;
+  chosenWord = choice.word;
   totalCardsThisSession++;
   speakWord(entry.word);
 
@@ -231,7 +325,7 @@ function handleChoice(choice) {
     cardsCompleted++;
 
     if (cardsCompleted % CARDS_PER_REVEAL === 0) {
-      revealNextCell();
+      revealNextCells();
       if (revealedCells.size >= GRID_SIZE) {
         showingCelebration = true;
         setTimeout(showCelebration, 2000);
@@ -248,9 +342,10 @@ function handleChoice(choice) {
 
   // Auto-advance after a delay (skip if celebration is about to show)
   if (!showingCelebration) {
+    // The pause covers the spoken word; with the voice off it only needs to show the tick.
     setTimeout(() => {
       handleNext();
-    }, 2000);
+    }, voiceEnabled ? 2000 : 1200);
   }
 }
 
@@ -296,33 +391,25 @@ function showCelebration() {
   overlay.id = 'celebration';
   overlay.innerHTML = `
     <div class="celebration-content">
-      <div class="celebration-canvas-wrap">
-        <canvas id="celebration-canvas"></canvas>
-      </div>
+      <img class="celebration-picture" alt="">
       <h2>Amazing!</h2>
-      <p>You revealed the ${pic.name}!</p>
+      <p class="celebration-title"></p>
+      <p class="celebration-artist"></p>
       <button onclick="dismissCelebration()">New Picture</button>
     </div>`;
+  const img = overlay.querySelector('.celebration-picture');
+  img.src = mysteryPictureSrc(currentMysteryIndex);
+  img.alt = pic.name;
+  overlay.querySelector('.celebration-title').textContent = pic.name;
+  overlay.querySelector('.celebration-artist').textContent = (pic.licence ? 'Photo: ' : 'by ') + pic.artist;
   document.body.appendChild(overlay);
-
-  requestAnimationFrame(() => {
-    const canvas = document.getElementById('celebration-canvas');
-    const wrap = canvas.parentElement;
-    const size = wrap.clientWidth;
-    const dpr = window.devicePixelRatio || 1;
-    canvas.width = size * dpr;
-    canvas.height = size * dpr;
-    const ctx = canvas.getContext('2d');
-    ctx.scale(dpr, dpr);
-    pic.draw(ctx, size, size);
-  });
 }
 
 function dismissCelebration() {
   const el = document.getElementById('celebration');
   if (el) el.remove();
   pickMysteryPicture();
-  renderMysteryCanvas();
+  renderMysteryPicture();
   renderOverlayCells();
   handleNext();
 }
@@ -356,7 +443,7 @@ function renderSettings() {
   panel.id = 'settings-panel';
   panel.onclick = (e) => e.stopPropagation();
 
-  const wordCount = allWords.filter(w => w.sounds.every(s => knownSounds.has(s))).length;
+  const wordCount = allWords.filter(wordIsKnown).length;
 
   let html = `
     <div class="settings-header">
@@ -365,7 +452,7 @@ function renderSettings() {
     </div>
     <div class="word-count" id="settings-word-count">${wordCount} words available</div>`;
 
-  for (const group of soundGroups) {
+  for (const group of visibleGroups) {
     const allOn = group.sounds.every(s => knownSounds.has(s));
     html += `
       <div class="sound-group">
@@ -376,7 +463,7 @@ function renderSettings() {
         <div class="sound-chips">`;
     for (const sound of group.sounds) {
       const active = knownSounds.has(sound) ? ' active' : '';
-      html += `<button class="sound-chip${active}" data-sound="${sound}" onclick="toggleSound('${sound}')">${sound}</button>`;
+      html += `<button class="sound-chip${active}" data-sound="${sound}" onclick="toggleSound('${sound}')">${chipLabel(sound)}</button>`;
     }
     html += `</div></div>`;
   }
@@ -385,8 +472,14 @@ function renderSettings() {
   document.body.appendChild(panel);
 }
 
+// "ow|cow" shows as "ow" with a small "cow" hint.
+function chipLabel(sound) {
+  const [text, hint] = sound.split('|');
+  return hint ? `${text}<span class="chip-hint">${hint}</span>` : text;
+}
+
 function updateSettingsUI() {
-  const wordCount = allWords.filter(w => w.sounds.every(s => knownSounds.has(s))).length;
+  const wordCount = allWords.filter(wordIsKnown).length;
   const wcEl = document.getElementById('settings-word-count');
   if (wcEl) wcEl.textContent = `${wordCount} words available`;
 
@@ -394,7 +487,7 @@ function updateSettingsUI() {
     chip.classList.toggle('active', knownSounds.has(chip.dataset.sound));
   });
 
-  for (const group of soundGroups) {
+  for (const group of visibleGroups) {
     const allOn = group.sounds.every(s => knownSounds.has(s));
     const btn = document.querySelector(`.group-toggle[data-group="${group.name}"]`);
     if (btn) btn.textContent = allOn ? 'All off' : 'All on';
@@ -414,7 +507,7 @@ function toggleSound(sound) {
 }
 
 function toggleGroup(groupName) {
-  const group = soundGroups.find(g => g.name === groupName);
+  const group = visibleGroups.find(g => g.name === groupName);
   if (!group) return;
   const allOn = group.sounds.every(s => knownSounds.has(s));
   for (const s of group.sounds) {
@@ -456,8 +549,4 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('voice-btn').addEventListener('click', toggleVoice);
   document.getElementById('settings-btn').addEventListener('click', openSettings);
-
-  window.addEventListener('resize', () => {
-    renderMysteryCanvas();
-  });
 });

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About — FlashReader</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body { user-select: text; }
+    .about {
+      width: 100%;
+      max-width: 600px;
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 28px 24px;
+      line-height: 1.6;
+    }
+    .about h1 { font-size: 1.4rem; font-weight: 800; margin-bottom: 12px; }
+    .about h2 { font-size: 1.05rem; font-weight: 800; margin: 24px 0 8px; }
+    .about p { margin-bottom: 10px; }
+    .about a { color: var(--dark); }
+    .about ul { padding-left: 20px; font-size: 0.9rem; }
+    .about li { margin-bottom: 4px; }
+    .back-link { display: inline-block; margin-bottom: 16px; font-weight: 700; }
+  </style>
+</head>
+<body>
+
+  <div class="about">
+    <a class="back-link" href="index.html">&larr; Back to the cards</a>
+
+    <h1>About FlashReader</h1>
+    <p>FlashReader is a phonics flashcard game for children who are learning to read. Read the word, tap the picture that matches, and each right answer uncovers a little more of a hidden picture.</p>
+    <p>Tap the 🔤 button to choose which sounds your child has learned so far; only words made from those sounds are shown. The 🔊 button reads each word aloud after an answer.</p>
+    <p>There are no accounts and nothing to sign up for. Your sound and voice choices are saved on this device only.</p>
+    <p>A project from <a href="https://johnfaben.com">johnfaben.com</a>.</p>
+
+    <h2>Word pictures</h2>
+    <p>The pictographic symbols used are the property of the Government of Aragón and have been created by Sergio Palao for <a href="https://arasaac.org">ARASAAC</a>, which distributes them under a <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">Creative Commons BY-NC-SA licence</a>.</p>
+
+    <h2>Hidden pictures</h2>
+    <p>The reward photographs come from <a href="https://commons.wikimedia.org">Wikimedia Commons</a>, where their photographers have released them under free licences. Each is shown unaltered apart from resizing; the title links to the original and its licence is given alongside. The painting by Raoul Dufy hangs in the Kelvingrove Art Gallery and Museum in Glasgow and is reproduced from <a href="https://artuk.org">Art UK</a>.</p>
+    <ul id="art-credits"></ul>
+  </div>
+
+  <footer class="site-footer">
+    <a href="index.html">FlashReader</a>
+    <span aria-hidden="true">&middot;</span>
+    <a href="https://johnfaben.com">johnfaben.com</a>
+  </footer>
+
+  <script src="mysteryPictures.js"></script>
+  <script>
+    const list = document.getElementById('art-credits');
+    const sorted = [...mysteryPictures].sort((a, b) => a.name.localeCompare(b.name) || a.artist.localeCompare(b.artist));
+    for (const pic of sorted) {
+      const li = document.createElement('li');
+      const link = document.createElement('a');
+      link.href = pic.source;
+      link.textContent = pic.name;
+      li.appendChild(link);
+      li.appendChild(document.createTextNode(` — ${pic.artist}${pic.date ? ', ' + pic.date : ''}`));
+      if (pic.licence) {
+        li.appendChild(document.createTextNode(' ('));
+        if (pic.licenceUrl) {
+          const lic = document.createElement('a');
+          lic.href = pic.licenceUrl; lic.textContent = pic.licence;
+          li.appendChild(lic);
+        } else li.appendChild(document.createTextNode(pic.licence));
+        li.appendChild(document.createTextNode(')'));
+      }
+      list.appendChild(li);
+    }
+  </script>
+</body>
+</html>
