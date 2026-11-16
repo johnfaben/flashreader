@@ -206,11 +206,11 @@ function renderOverlayCells() {
 }
 
 // The middle of a picture gives it away, so two of the four centre tiles are always the last to go.
+// They are a diagonal pair: that leaves the other diagonal showing two separate corners of the
+// centre, which is harder to recognise than one joined-up half.
 function pickHeldCells() {
-  const centre = [...CENTRE_CELLS];
-  centre.splice(Math.floor(Math.random() * centre.length), 1);
-  centre.splice(Math.floor(Math.random() * centre.length), 1);
-  return centre;
+  const [a, b, c, d] = CENTRE_CELLS;
+  return Math.random() < 0.5 ? [a, d] : [b, c];
 }
 
 function revealNextCells() {
