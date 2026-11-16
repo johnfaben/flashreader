@@ -376,6 +376,12 @@ function handleNext() {
   renderAll();
 }
 
+// "Well done, you revealed the puffin". Photos are named after their subject; a titled artwork keeps its title.
+function celebrationMessage(pic) {
+  const name = pic.licence ? pic.name.charAt(0).toLowerCase() + pic.name.slice(1) : pic.name;
+  return 'Well done, you revealed ' + (/^the /i.test(name) ? '' : 'the ') + name;
+}
+
 function playCelebrationSound() {
   try {
     const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -398,6 +404,8 @@ function playCelebrationSound() {
 function showCelebration() {
   if (voiceEnabled) playCelebrationSound();
   const pic = mysteryPictures[currentMysteryIndex];
+  // Spoken after the chime (which lasts a little under a second)
+  setTimeout(() => speakWord(celebrationMessage(pic)), 900);
   const overlay = document.createElement('div');
   overlay.className = 'celebration';
   overlay.id = 'celebration';
