@@ -9,6 +9,7 @@ let currentChoices = [];          // [{word, emoji}, ...] — 3 options
 let cardsCompleted = 0;           // correct answers since last grid reveal
 let totalCardsThisSession = 0;
 let revealedCells = new Set();
+let heldCells = [];        // two centre tiles kept covered until the very end of each picture
 let currentMysteryIndex = 0;
 let mysteryQueue = [];            // shuffled picture order, so none repeats until all have been shown
 let settingsOpen = false;
@@ -16,6 +17,7 @@ let voiceEnabled = localStorage.getItem('voiceEnabled') === 'true';
 
 const CARDS_PER_REVEAL = 1;
 const GRID_SIZE = 16;        // 4x4 tiles (grid columns are set in style.css)
+const CENTRE_CELLS = [5, 6, 9, 10];  // the four middle tiles of the 4x4 grid
 const CELLS_PER_REVEAL = 2;  // scattered tiles uncovered per reveal: 8 reveals per picture
 
 // ---- Init ----
@@ -176,6 +178,7 @@ function pickMysteryPicture() {
   }
   currentMysteryIndex = mysteryQueue.pop();
   revealedCells = new Set();
+  heldCells = pickHeldCells();
   cardsCompleted = 0;
 }
 
@@ -202,11 +205,20 @@ function renderOverlayCells() {
   }
 }
 
+// The middle of a picture gives it away, so two of the four centre tiles are always the last to go.
+function pickHeldCells() {
+  const centre = [...CENTRE_CELLS];
+  centre.splice(Math.floor(Math.random() * centre.length), 1);
+  centre.splice(Math.floor(Math.random() * centre.length), 1);
+  return centre;
+}
+
 function revealNextCells() {
-  const unrevealed = [];
+  let unrevealed = [];
   for (let i = 0; i < GRID_SIZE; i++) {
-    if (!revealedCells.has(i)) unrevealed.push(i);
+    if (!revealedCells.has(i) && !heldCells.includes(i)) unrevealed.push(i);
   }
+  if (unrevealed.length === 0) unrevealed = heldCells.filter(i => !revealedCells.has(i));
   const overlay = document.getElementById('mystery-overlay');
   for (let n = 0; n < CELLS_PER_REVEAL && unrevealed.length > 0; n++) {
     const pick = unrevealed.splice(Math.floor(Math.random() * unrevealed.length), 1)[0];
