@@ -376,10 +376,10 @@ function handleNext() {
   renderAll();
 }
 
-// "Well done, you revealed the puffin". Photos are named after their subject; a titled artwork keeps its title.
+// "Well done! You found the puffin!" Photos are named after their subject; a titled artwork keeps its title.
 function celebrationMessage(pic) {
   const name = pic.licence ? pic.name.charAt(0).toLowerCase() + pic.name.slice(1) : pic.name;
-  return 'Well done, you revealed ' + (/^the /i.test(name) ? '' : 'the ') + name;
+  return 'Well done! You found ' + (/^the /i.test(name) ? '' : 'the ') + name + '!';
 }
 
 function playCelebrationSound() {
